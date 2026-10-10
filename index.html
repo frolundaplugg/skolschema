@@ -24,6 +24,7 @@
       --gray: #7f7f7f;
       --light-gray: #b3b3b3;
       --orange: #f4a200;
+      --time-width: 90px;
     }
 
     * { box-sizing: border-box; }
@@ -54,8 +55,7 @@
       border: 2px solid var(--border);
       padding: 0;
       text-align: center;
-      vertical-align: middle;
-      overflow: hidden;
+      vertical-align: top;
       background: var(--cell-bg);
     }
 
@@ -67,56 +67,74 @@
     }
 
     .time-col {
-      width: 90px;
+      width: var(--time-width);
       background: #eef2f8;
       font-weight: 700;
       font-size: 13px;
     }
 
-    .time-cell {
-      height: 62px;
+    .time-row {
+      height: 54px;
+      border-bottom: 2px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
       background: #eef2f8;
+      font-weight: 700;
     }
 
-    .lesson {
-      width: 100%;
-      height: 100%;
-      min-height: 62px;
+    .day-column {
+      min-height: 760px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4px 4px;
-      line-height: 1.1;
-      color: #111;
+      background: #f1f1f1;
     }
 
-    .lesson .range {
-      font-size: 11px;
+    .lesson-block {
+      width: 100%;
+      border-top: 2px solid rgba(0,0,0,0.7);
+      border-bottom: 2px solid rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 4px;
+      min-height: 46px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lesson-block .inner {
+      text-align: center;
+      line-height: 1.1;
+      width: 100%;
+    }
+
+    .lesson-block .range {
+      font-size: 10px;
       font-weight: 700;
       margin-bottom: 2px;
       opacity: 0.9;
     }
 
-    .lesson .subject {
+    .lesson-block .subject {
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.02em;
+      line-height: 1.2;
     }
 
-    .lesson .info {
+    .lesson-block .info {
       font-size: 10px;
       font-weight: 700;
-      margin-top: 3px;
+      margin-top: 2px;
       opacity: 0.92;
     }
 
-    .empty-cell {
+    .empty-block {
+      height: 46px;
       background: var(--empty);
+      border-top: 2px solid rgba(0,0,0,0.7);
+      border-bottom: 2px solid rgba(0,0,0,0.7);
     }
 
     .color-red { background: var(--red); }
@@ -130,18 +148,10 @@
     .color-lunch { background: var(--lunch); }
 
     @media (max-width: 980px) {
-      .page {
-        padding: 0 8px 18px;
-      }
-      .time-col {
-        width: 70px;
-      }
-      .lesson .subject {
-        font-size: 11px;
-      }
-      .lesson .info {
-        font-size: 9px;
-      }
+      .page { padding: 0 8px 18px; }
+      .time-col { width: 70px; }
+      .lesson-block .subject { font-size: 10px; }
+      .lesson-block .info { font-size: 8px; }
     }
   </style>
 </head>
@@ -159,7 +169,7 @@
       "Fredag 16/10"
     ];
 
-    const times = [
+    const timeLabels = [
       "08:00",
       "08:40",
       "09:00",
@@ -243,46 +253,23 @@
       ]
     };
 
-    function makeLessonCell(lesson) {
-      const td = document.createElement("td");
-      td.className = lesson.color;
-      const div = document.createElement("div");
-      div.className = "lesson";
-
-      const range = document.createElement("div");
-      range.className = "range";
-      range.textContent = `${lesson.start}–${lesson.end}`;
-
-      const subject = document.createElement("div");
-      subject.className = "subject";
-      subject.textContent = lesson.subject;
-
-      div.appendChild(range);
-      div.appendChild(subject);
-
-      if (lesson.info) {
-        const info = document.createElement("div");
-        info.className = "info";
-        info.textContent = lesson.info;
-        div.appendChild(info);
-      }
-
-      td.appendChild(div);
-      return td;
+    function toMin(value) {
+      const [hh, mm] = value.split(':').map(Number);
+      return hh * 60 + mm;
     }
 
     function render() {
-      const table = document.getElementById("schedule-table");
-      const thead = document.createElement("thead");
-      const headRow = document.createElement("tr");
+      const table = document.getElementById('schedule-table');
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
 
-      const timeHeader = document.createElement("th");
-      timeHeader.className = "time-col";
-      timeHeader.textContent = "Tid";
+      const timeHeader = document.createElement('th');
+      timeHeader.className = 'time-col';
+      timeHeader.textContent = 'Tid';
       headRow.appendChild(timeHeader);
 
       days.forEach(day => {
-        const th = document.createElement("th");
+        const th = document.createElement('th');
         th.textContent = day;
         headRow.appendChild(th);
       });
@@ -290,31 +277,73 @@
       thead.appendChild(headRow);
       table.appendChild(thead);
 
-      const tbody = document.createElement("tbody");
+      const tbody = document.createElement('tbody');
+      const startTimes = ['08:00','08:40','09:00','09:35','10:00','10:35','11:00','11:35','12:00','12:40','13:00','13:35','14:00','14:35','15:00','15:35'];
 
-      times.forEach(time => {
-        const row = document.createElement("tr");
+      function renderTimeColumn() {
+        const leftCol = document.createElement('td');
+        leftCol.className = 'time-col';
+        const colWrap = document.createElement('div');
+        colWrap.style.display = 'flex';
+        colWrap.style.flexDirection = 'column';
 
-        const timeCell = document.createElement("td");
-        timeCell.className = "time-col time-cell";
-        timeCell.textContent = time;
-        row.appendChild(timeCell);
-
-        days.forEach(day => {
-          const lesson = (scheduleData[day] || []).find(item => item.start === time);
-
-          if (lesson) {
-            row.appendChild(makeLessonCell(lesson));
-          } else {
-            const empty = document.createElement("td");
-            empty.className = "empty-cell";
-            row.appendChild(empty);
-          }
+        startTimes.forEach(time => {
+          const row = document.createElement('div');
+          row.className = 'time-row';
+          row.textContent = time;
+          colWrap.appendChild(row);
         });
 
-        tbody.appendChild(row);
+        leftCol.appendChild(colWrap);
+        return leftCol;
+      }
+
+      const row = document.createElement('tr');
+      row.appendChild(renderTimeColumn());
+
+      days.forEach(dayName => {
+        const td = document.createElement('td');
+        const col = document.createElement('div');
+        col.className = 'day-column';
+
+        const items = scheduleData[dayName];
+        let lastEnd = toMin('08:00');
+
+        items.forEach(item => {
+          const start = toMin(item.start);
+          const end = toMin(item.end);
+          const gap = start - lastEnd;
+          if (gap > 0) {
+            const emptyGap = document.createElement('div');
+            emptyGap.className = 'empty-block';
+            emptyGap.style.height = `${Math.max(12, (gap / 5) * 1.8)}px`;
+            col.appendChild(emptyGap);
+          }
+
+          const blk = document.createElement('div');
+          const duration = end - start;
+          blk.className = `lesson-block ${item.color}`;
+          blk.style.minHeight = `${Math.max(40, duration * 1.15)}px`;
+          blk.style.height = `${Math.max(40, duration * 1.15)}px`;
+
+          const inner = document.createElement('div');
+          inner.className = 'inner';
+          inner.innerHTML = `
+            <div class="range">${item.start}–${item.end}</div>
+            <div class="subject">${item.subject}</div>
+            ${item.info ? `<div class="info">${item.info}</div>` : ''}
+          `;
+
+          blk.appendChild(inner);
+          col.appendChild(blk);
+          lastEnd = end;
+        });
+
+        td.appendChild(col);
+        row.appendChild(td);
       });
 
+      tbody.appendChild(row);
       table.appendChild(tbody);
     }
 
